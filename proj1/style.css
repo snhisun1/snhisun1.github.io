@@ -1,0 +1,137 @@
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    background: #f6f7f9;
+    color: #222;
+    font-family: Arial, Helvetica, sans-serif;
+    line-height: 1.6;
+}
+
+header {
+    padding: 48px 20px;
+    background: #23395d;
+    color: white;
+    text-align: center;
+}
+
+header h1,
+header p {
+    margin: 0;
+}
+
+header p {
+    color: #dce5f2;
+}
+
+main {
+    max-width: 900px;
+    margin: 32px auto;
+    padding: 0 20px;
+}
+
+section,
+.card {
+    margin-bottom: 24px;
+    padding: 24px;
+    background: white;
+    border-radius: 8px;
+}
+
+a {
+    color: #1f5fa9;
+}
+
+.project-link {
+    font-size: 1.1rem;
+    font-weight: bold;
+    text-decoration: none;
+}
+
+.back-link {
+    display: inline-block;
+    margin-bottom: 20px;
+    text-decoration: none;
+}
+
+figure {
+    margin: 0;
+}
+
+img {
+    display: block;
+    width: 100%;
+    max-width: 650px;
+    height: auto;
+    margin: 16px auto;
+    border-radius: 6px;
+}
+
+.image-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.image-grid img {
+    width: 100%;
+    max-width: none;
+    height: auto;
+    margin: 0;
+}
+
+/* Equal sizing applies only to Part 2. */
+.architecture-grid img {
+    height: 300px;
+    object-fit: cover;
+}
+
+footer {
+    padding: 24px;
+    color: #666;
+    text-align: center;
+}
+
+/* Additions for the independent Project 1 exemplar. */
+html { scroll-behavior: smooth; }
+header p { max-width: 760px; margin: 6px auto 0; }
+h2 { color: #23395d; margin-top: 0; }
+h3 { margin-top: 28px; }
+section { scroll-margin-top: 20px; }
+section p { overflow-wrap: anywhere; }
+.draft-note { border-left: 4px solid #23395d; background: #eaf0f7; padding: 16px 20px; margin-bottom: 20px; }
+.draft-note p { margin: 4px 0 0; }
+.contents { display: flex; flex-wrap: wrap; gap: 8px 20px; margin-bottom: 24px; }
+.contents a { text-decoration: none; }
+.note { background: #f2f5f9; padding: 16px 20px; border-radius: 6px; }
+.note p { margin-bottom: 0; }
+.formula { text-align: center; background: #f6f7f9; padding: 20px 12px; border-radius: 6px; overflow-x: auto; font-family: Georgia, serif; line-height: 1.9; }
+.image-grid { align-items: start; }
+.gallery { row-gap: 28px; margin: 20px 0; }
+figure.result { margin-top: 12px; }
+figcaption { font-size: .9rem; padding: 10px 0 4px; }
+figcaption strong, figcaption span { display: block; }
+figcaption span { color: #555; font-variant-numeric: tabular-nums; }
+.result a { display: block; }
+.result img { background: #f6f7f9; }
+.table-wrap { overflow-x: auto; margin: 22px 0; }
+table { width: 100%; border-collapse: collapse; font-size: .88rem; font-variant-numeric: tabular-nums; }
+caption { text-align: left; margin-bottom: 10px; color: #555; }
+th, td { padding: 10px 12px; border-bottom: 1px solid #dce1e8; text-align: left; }
+thead { background: #edf1f6; }
+tbody th { font-weight: normal; }
+code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .9em; }
+pre { padding: 16px; background: #f6f7f9; overflow-x: auto; border-radius: 6px; }
+li { margin-bottom: 9px; }
+a:focus-visible { outline: 3px solid #b47418; outline-offset: 4px; }
+@media (max-width: 600px) {
+ header { padding: 32px 18px; }
+ header h1 { font-size: 1.8rem; }
+ main { padding: 0 12px; margin-top: 20px; }
+ section { padding: 20px 16px; }
+ .image-grid { grid-template-columns: 1fr; }
+ th, td { padding: 9px 8px; }
+}
+@media print { .contents, .draft-note { display: none; } body { background: white; } section { break-inside: auto; } figure { break-inside: avoid; } }

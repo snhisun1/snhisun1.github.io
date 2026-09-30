@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Project 2 | CS180</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header><h1>Project 2</h1><p>Fun with Filters and Frequencies!</p></header>
+<main>
+<a class="back-link" href="../">← Back to all projects</a>
+<nav class="contents" aria-label="Sections">
+<a href="#part-1-1">1.1 Convolution</a><a href="#part-1-2">1.2 Finite differences</a><a href="#part-1-3">1.3 DoG</a><a href="#part-2-1">2.1 Sharpening</a><a href="#part-2-2">2.2 Hybrids</a><a href="#part-2-3">2.3 Stacks</a><a href="#part-2-4">2.4 Blending</a><a href="#reflection">Reflection</a>
+</nav>
+
+<section id="part-1-1"><h2>Part 1.1: Convolutions from Scratch</h2>
+
+<h3>Four-loop convolution</h3>
+
+<pre><code>def convolve_four_loops(image, kernel):
+    height, width = image.shape
+    kernel_height, kernel_width = kernel.shape
+
+    flipped_kernel = np.flip(kernel, axis=0)
+    flipped_kernel = np.flip(flipped_kernel, axis=1)
+
+    padded = np.pad(
+        image,
+        ((kernel_height // 2, (kernel_height - 1) // 2), (kernel_width // 2, (kernel_width - 1) // 2))
+    )
+    output = np.zeros((height, width))
+
+    for y in range(height):
+        for x in range(width):
+            total = 0
+            for kernel_y in range(kernel_height):
+                for kernel_x in range(kernel_width):
+                    total += (padded[y + kernel_y, x + kernel_x] * flipped_kernel[kernel_y, kernel_x])
+            output[y, x] = total
+
+    return output</code></pre>
+
+<h3>Two-loop convolution</h3>
+
+<pre><code>def convolve_two_loops(image, kernel):
+    height, width = image.shape
+    kernel_height, kernel_width = kernel.shape
+
+    flipped_kernel = np.flip(kernel, axis=0)
+    flipped_kernel = np.flip(flipped_kernel, axis=1)
+
+    padded = np.pad(
+        image,
+        (
+            (kernel_height // 2, (kernel_height - 1) // 2),
+            (kernel_width // 2, (kernel_width - 1) // 2))
+    )
+
+    output = np.zeros((height, width))
+
+    for y in range(height):
+        for x in range(width):
+            img_patch = padded[y:y + kernel_height, x:x + kernel_width]
+            output[y, x] = np.sum(img_patch * flipped_kernel)
+
+    return output</code></pre>
+
+<h3>Filters</h3>
+
+<pre><code>box_filter = np.ones((9, 9)) / 81
+dx = np.array([[1, 0, -1]])
+dy = np.array([[1], [0], [-1]])</code></pre>
+
+<div class="image-grid gallery">
+<figure class="result"><a href="media/selfie_original.png" target="_blank" rel="noopener"><img src="media/selfie_original.png" alt="Original grayscale selfie" loading="lazy" width="384" height="512"></a><figcaption><strong>Original grayscale selfie</strong></figcaption></figure>
+<figure class="result"><a href="media/selfie_box.png" target="_blank" rel="noopener"><img src="media/selfie_box.png" alt="9 × 9 box filter" loading="lazy" width="384" height="512"></a><figcaption><strong>9 × 9 box filter</strong></figcaption></figure>
+<figure class="result"><a href="media/selfie_dx.png" target="_blank" rel="noopener"><img src="media/selfie_dx.png" alt="Horizontal derivative" loading="lazy" width="384" height="512"></a><figcaption><strong>Horizontal derivative</strong></figcaption></figure>
+<figure class="result"><a href="media/selfie_dy.png" target="_blank" rel="noopener"><img src="media/selfie_dy.png" alt="Vertical derivative" loading="lazy" width="384" height="512"></a><figcaption><strong>Vertical derivative</strong></figcaption></figure>
+</div>
+
+<h3>Comparison with SciPy</h3>
+
+<p>To compare my implementation with the built in SciPy implementation, I compared every output pixel with SciPy using simple loops to track the largest difference. Both implementations matched exactly for the derivative filters, and the box-filter differences were below 10<sup>−15</sup>, which seems consistent with rounding differences from using floats.</p>
+
+<p>As for the runtime, for the 9 × 9 box filter, the two-loop implementation was faster because NumPy handled the multiplication and summation over each image patch. For the smaller derivative filters, the four-loop implementation was faster because calling NumPy separately for every pixel added a good amount of time. SciPy was clearly and by far the fastest for all three filters. This was all measured using the perf_counter() from Python’s built-in module, subtracting the start time from the end time for each  call. </p>
+
+<p>My implementation follows directly the class definition of convolution, by flipping the kernel horizontally and vertically before multiplying it with each image patch and summing the products.</p>
+
+<p>As for border handling, I used zero padding to ensure that the output was the same size as the input, which is matching SciPy’s mode="same". Further, pixels outside the image are treated as zero, which can also have a side effect of creating artificial edges or darken blurred regions near the image boundaries.</p>
+
+<div class="table-wrap"><table><thead><tr><th>Filter</th><th>Four loops (s)</th><th>Two loops (s)</th><th>SciPy (s)</th></tr></thead><tbody><tr><th scope="row">9 × 9 box</th><td>2.082722</td><td>0.366376</td><td>0.012711</td></tr><tr><th scope="row">Dₓ</th><td>0.117111</td><td>0.298040</td><td>0.001254</td></tr><tr><th scope="row">Dᵧ</th><td>0.135323</td><td>0.295890</td><td>0.002114</td></tr></tbody></table></div></section>
+
+<section id="part-1-2"><h2>Part 1.2: Finite Difference Operator</h2>
+
+<figure class="result"><a href="media/cameraman.png" target="_blank" rel="noopener"><img src="media/cameraman.png" alt="Original cameraman" loading="lazy" width="540" height="542"></a><figcaption><strong>Original cameraman</strong></figcaption></figure>
+
+<div class="image-grid gallery">
+<figure class="result"><a href="media/cameraman_dx.png" target="_blank" rel="noopener"><img src="media/cameraman_dx.png" alt="Horizontal derivative" loading="lazy" width="540" height="542"></a><figcaption><strong>Horizontal derivative</strong></figcaption></figure>
+<figure class="result"><a href="media/cameraman_dy.png" target="_blank" rel="noopener"><img src="media/cameraman_dy.png" alt="Vertical derivative" loading="lazy" width="540" height="542"></a><figcaption><strong>Vertical derivative</strong></figcaption></figure>
+<figure class="result"><a href="media/cameraman_magnitude.png" target="_blank" rel="noopener"><img src="media/cameraman_magnitude.png" alt="Gradient magnitude" loading="lazy" width="540" height="542"></a><figcaption><strong>Gradient magnitude</strong></figcaption></figure>
+<figure class="result"><a href="media/cameraman_edges.png" target="_blank" rel="noopener"><img src="media/cameraman_edges.png" alt="Binarized edges" loading="lazy" width="540" height="542"></a><figcaption><strong>Binarized edges</strong><span>Threshold = 0.25</span></figcaption></figure>
+</div>
+
+<p class="note"> I chose a threshold of 0.25. I decided on this after testing several values and comparing the resulting edge images, and 0.25 ended up best preserving the main outlines of the cameraman, camera, and tripod while suppressing a good amount of the weaker background texture. In my experiments, it seemed that higher thresholds removed more noise but also created more gaps in the cameraman’s outline, so I thus settled on 0.25 because it struck a good balance between retaining important edges and also removing noise. However, some scattered responses remain, near to the ground.</p>
+
+</section>
+
+<section id="part-1-3"><h2>Part 1.3: Derivative of Gaussian (DoG) Filter</h2>
+
+<h3>Gaussian smoothing</h3>
+
+<figure class="result"><a href="media/cameraman_blurred.png" target="_blank" rel="noopener"><img src="media/cameraman_blurred.png" alt="Gaussian-blurred cameraman" loading="lazy" width="540" height="542"></a><figcaption><strong>Gaussian-blurred cameraman</strong><span>7 × 7 kernel · σ = 1</span></figcaption></figure>
+
+<div class="image-grid gallery">
+<figure class="result"><a href="media/blurred_magnitude.png" target="_blank" rel="noopener"><img src="media/blurred_magnitude.png" alt="Gradient magnitude after smoothing" loading="lazy" width="540" height="542"></a><figcaption><strong>Gradient magnitude after smoothing</strong></figcaption></figure>
+<figure class="result"><a href="media/blurred_edges.png" target="_blank" rel="noopener"><img src="media/blurred_edges.png" alt="Edges after smoothing" loading="lazy" width="540" height="542"></a><figcaption><strong>Edges after smoothing</strong><span>Threshold = 0.12</span></figcaption></figure>
+</div>
+
+<h3>Derivative of Gaussian filters</h3>
+
+<div class="image-grid gallery">
+<figure class="result"><a href="media/dog_x_filter.png" target="_blank" rel="noopener"><img src="media/dog_x_filter.png" alt="DoG filter: x" loading="lazy" width="9" height="7"></a><figcaption><strong>DoG filter: x</strong></figcaption></figure>
+<figure class="result"><a href="media/dog_y_filter.png" target="_blank" rel="noopener"><img src="media/dog_y_filter.png" alt="DoG filter: y" loading="lazy" width="7" height="9"></a><figcaption><strong>DoG filter: y</strong></figcaption></figure>
+<figure class="result"><a href="media/dog_magnitude.png" target="_blank" rel="noopener"><img src="media/dog_magnitude.png" alt="DoG gradient magnitude" loading="lazy" width="540" height="542"></a><figcaption><strong>DoG gradient magnitude</strong></figcaption></figure>
+<figure class="result"><a href="media/dog_edges.png" target="_blank" rel="noopener"><img src="media/dog_edges.png" alt="DoG edges" loading="lazy" width="540" height="542"></a><figcaption><strong>DoG edges</strong><span>Threshold = 0.12</span></figcaption></figure>
+</div>
+
+<h3>Comparison and verification</h3>
+
+<div class="image-grid gallery">
+<figure class="result"><a href="media/cameraman_edges.png" target="_blank" rel="noopener"><img src="media/cameraman_edges.png" alt="Binarized edges" loading="lazy" width="540" height="542"></a><figcaption><strong>Binarized edges</strong><span>Threshold = 0.25</span></figcaption></figure>
+<figure class="result"><a href="media/blurred_edges.png" target="_blank" rel="noopener"><img src="media/blurred_edges.png" alt="Gaussian smoothing + finite differences" loading="lazy" width="540" height="542"></a><figcaption><strong>Gaussian smoothing + finite differences</strong><span>Threshold = 0.12</span></figcaption></figure>
+</div>
+
+<p>Compared with finite differences alone, the Gaussian smoothing seems to have reduced scattered responses in the ground and also produced smoother, and more continuous outlines. Further, some fine details disappear, and the thresholded edges appear thicker. After testing thresholds of 0.10, 0.12, and 0.14 on the smoothed image, I settled on 0.12 because it reduced more ground noise than 0.10 while retaining more edge detail than 0.14. I used a lower threshold after smoothing because blurring makes the edges weaker, so a higher threshold would miss more of them.</p>
+
+<p>The DoG filters give the same result as smoothing first and then taking finite differences, up to the floating point rounding errors (within the image interiors)). To verify, I calculated the maximum absolute differences to be very small and due to rounding: approximately 7.97 × 10<sup>−16</sup> in x and 7.45 × 10<sup>−16</sup> in y. I excluded a four-pixel border from this comparison error calculation because the methods handle the image edges differently; the two-step method pads the blurred image again before taking derivatives, while the DoG method applies the combined filter to the original image in just one step.</p>
+
+</section>
+
+<section id="part-2-1"><h2>Part 2.1: Image Sharpening</h2>
+
+<p>Unsharp masking makes an image look sharper by strengthening its high-frequency details, such as edges and fine textures. To begin the process, first, a Gaussian blur smooths out these details. Basically, the Gaussian acts as a low-pass filter: it will preserves gradual changes in brightness, while also reducing rapid changes between nearby pixels, which correspond to high frequencies. After subtracting the blurred image from the original, this isolates the high-frequency component, which is then scaled and added back to the original to make the details stand out more. Adding this component back essentially strengthens the rapid brightness changes around edges, making the image appear sharper.</p>
+
+<p>I combined these steps into a single convolution and compared sharpening amounts of 1 and 2. From the results, we can see that a larger sharpening amount makes edges and textures more pronounced, but can also make them look exaggerated.</p>
+
+<h3>Taj Mahal</h3>
+
+<div class="image-grid gallery">
+<figure class="result"><a href="media/taj_original.png" target="_blank" rel="noopener"><img src="media/taj_original.png" alt="Original" loading="lazy" width="300" height="300"></a><figcaption><strong>Original</strong></figcaption></figure>
+<figure class="result"><a href="media/taj_blurred.png" target="_blank" rel="noopener"><img src="media/taj_blurred.png" alt="Blurred" loading="lazy" width="300" height="300"></a><figcaption><strong>Blurred</strong><span>7 × 7 Gaussian · σ = 1</span></figcaption></figure>
+<figure class="result"><a href="media/taj_high_frequencies.png" target="_blank" rel="noopener"><img src="media/taj_high_frequencies.png" alt="High-frequency component" loading="lazy" width="300" height="300"></a><figcaption><strong>High-frequency component</strong></figcaption></figure>
+<figure class="result"><a href="media/taj_sharpened_1.png" target="_blank" rel="noopener"><img src="media/taj_sharpened_1.png" alt="Sharpened" loading="lazy" width="300" height="300"></a><figcaption><strong>Sharpened</strong><span>α = 1</span></figcaption></figure>
+</div>
+
+<figure class="result"><a href="media/taj_sharpened_2.png" target="_blank" rel="noopener"><img src="media/taj_sharpened_2.png" alt="Sharpened" loading="lazy" width="300" height="300"></a><figcaption><strong>Sharpened</strong><span>α = 2</span></figcaption></figure>
+
+<h3>Old State House, Boston</h3>
+
+<div class="image-grid gallery">
+<figure class="result"><a href="media/sharp_original.png" target="_blank" rel="noopener"><img src="media/sharp_original.png" alt="Original" loading="lazy" width="480" height="320"></a><figcaption><strong>Original</strong></figcaption></figure>
+<figure class="result"><a href="media/sharp_blurred.png" target="_blank" rel="noopener"><img src="media/sharp_blurred.png" alt="Blurred" loading="lazy" width="480" height="320"></a><figcaption><strong>Blurred</strong><span>7 × 7 Gaussian · σ = 1</span></figcaption></figure>
+<figure class="result"><a href="media/sharp_high_frequencies.png" target="_blank" rel="noopener"><img src="media/sharp_high_frequencies.png" alt="High-frequency component" loading="lazy" width="480" height="320"></a><figcaption><strong>High-frequency component</strong></figcaption></figure>
+<figure class="result"><a href="media/sharp_sharpened_1.png" target="_blank" rel="noopener"><img src="media/sharp_sharpened_1.png" alt="Sharpened" loading="lazy" width="480" height="320"></a><figcaption><strong>Sharpened</strong><span>α = 1</span></figcaption></figure>
+<figure class="result"><a href="media/sharp_sharpened_2.png" target="_blank" rel="noopener"><img src="media/sharp_sharpened_2.png" alt="Sharpened" loading="lazy" width="480" height="320"></a><figcaption><strong>Sharpened</strong><span>α = 2</span></figcaption></figure>
+<figure class="result"><a href="media/sharp_resharpened.png" target="_blank" rel="noopener"><img src="media/sharp_resharpened.png" alt="Resharpened blurred image" loading="lazy" width="480" height="320"></a><figcaption><strong>Resharpened blurred image</strong><span>α = 2</span></figcaption></figure>
+</div>
+
+<h3>Blur, then resharpen: observations</h3>
+
+<p> This is the Old State House in Boston, where I'm from. Starting with a regular image, after blurring it with the Gaussian filter, the sharpening operation was then applied to the blurred image. You can see that in the blurred version, the window frames, brickwork, and building outlines become softer, and the smaller architectural details are harder to distinguish.</p>
+<p>After resharpening, the edges become more distinct again, so the result looks clearer than the blurred image. However, when I compare it with the original sharp image, some of the fine detail is still missing. In particular, the original has clearer separation between small features in the windows and building surfaces.</p>
+<p>This experiment shows that sharpening does not completely reverse the blur. </p>
+
+</section>
+
+<section id="part-2-2"><h2>Part 2.2: Hybrid Images</h2>
+
+<h3>Derek + Nutmeg: full process</h3>
+
+<div class="image-grid gallery">
+<figure class="result"><a href="media/derek_nutmeg_original_high.png" target="_blank" rel="noopener"><img src="media/derek_nutmeg_original_high.png" alt="Original: Derek" loading="lazy" width="429" height="600"></a><figcaption><strong>Original: Derek</strong><span>High-frequency source</span></figcaption></figure>
+<figure class="result"><a href="media/derek_nutmeg_original_low.png" target="_blank" rel="noopener"><img src="media/derek_nutmeg_original_low.png" alt="Original: Nutmeg" loading="lazy" width="600" height="450"></a><figcaption><strong>Original: Nutmeg</strong><span>Low-frequency source</span></figcaption></figure>
+<figure class="result"><a href="media/derek_nutmeg_aligned_high.png" target="_blank" rel="noopener"><img src="media/derek_nutmeg_aligned_high.png" alt="Aligned Derek" loading="lazy" width="383" height="619"></a><figcaption><strong>Aligned Derek</strong></figcaption></figure>
+<figure class="result"><a href="media/derek_nutmeg_aligned_low.png" target="_blank" rel="noopener"><img src="media/derek_nutmeg_aligned_low.png" alt="Aligned Nutmeg" loading="lazy" width="383" height="619"></a><figcaption><strong>Aligned Nutmeg</strong></figcaption></figure>
+</div>
+
+<div class="image-grid gallery">
+<figure class="result"><a href="media/derek_nutmeg_high_frequencies.png" target="_blank" rel="noopener"><img src="media/derek_nutmeg_high_frequencies.png" alt="Derek: high frequencies" loading="lazy" width="383" height="619"></a><figcaption><strong>Derek: high frequencies</strong><span>σ = 3</span></figcaption></figure>
+<figure class="result"><a href="media/derek_nutmeg_low_frequencies.png" target="_blank" rel="noopener"><img src="media/derek_nutmeg_low_frequencies.png" alt="Nutmeg: low frequencies" loading="lazy" width="383" height="619"></a><figcaption><strong>Nutmeg: low frequencies</strong><span>σ = 6</span></figcaption></figure>
+</div>
+
+<figure class="result"><a href="media/derek_nutmeg_hybrid.png" target="_blank" rel="noopener"><img src="media/derek_nutmeg_hybrid.png" alt="Derek + Nutmeg hybrid" loading="lazy" width="383" height="619"></a><figcaption><strong>Derek + Nutmeg hybrid</strong></figcaption></figure>
+
+<h3>Fourier analysis</h3>
+
+<div class="image-grid gallery">
+<figure class="result"><a href="media/derek_nutmeg_fft_input_high.png" target="_blank" rel="noopener"><img src="media/derek_nutmeg_fft_input_high.png" alt="Aligned Derek: log Fourier magnitude" loading="lazy" width="383" height="619"></a><figcaption><strong>Aligned Derek: log Fourier magnitude</strong></figcaption></figure>
+<figure class="result"><a href="media/derek_nutmeg_fft_input_low.png" target="_blank" rel="noopener"><img src="media/derek_nutmeg_fft_input_low.png" alt="Aligned Nutmeg: log Fourier magnitude" loading="lazy" width="383" height="619"></a><figcaption><strong>Aligned Nutmeg: log Fourier magnitude</strong></figcaption></figure>
+<figure class="result"><a href="media/derek_nutmeg_fft_filtered_high.png" target="_blank" rel="noopener"><img src="media/derek_nutmeg_fft_filtered_high.png" alt="High-pass result: log Fourier magnitude" loading="lazy" width="383" height="619"></a><figcaption><strong>High-pass result: log Fourier magnitude</strong></figcaption></figure>
+<figure class="result"><a href="media/derek_nutmeg_fft_filtered_low.png" target="_blank" rel="noopener"><img src="media/derek_nutmeg_fft_filtered_low.png" alt="Low-pass result: log Fourier magnitude" loading="lazy" width="383" height="619"></a><figcaption><strong>Low-pass result: log Fourier magnitude</strong></figcaption></figure>
+</div>
+
+<figure class="result"><a href="media/derek_nutmeg_fft_hybrid.png" target="_blank" rel="noopener"><img src="media/derek_nutmeg_fft_hybrid.png" alt="Hybrid: log Fourier magnitude" loading="lazy" width="383" height="619"></a><figcaption><strong>Hybrid: log Fourier magnitude</strong></figcaption></figure>
+
+<h3>My chosen images</h3>
+
+<p>For my custom experiments, I chose two of my favorite sports players, Drake Maye and Payton Tolle, and paired each with an animal that I think represents them: a golden retriever for Maye and a brown bear for Tolle.</p>
+
+<h3>Drake Maye + golden retriever</h3>
+
+<div class="image-grid gallery">
+<figure class="result"><a href="media/maye_dog_original_high.png" target="_blank" rel="noopener"><img src="media/maye_dog_original_high.png" alt="Golden retriever" loading="lazy" width="600" height="450"></a><figcaption><strong>Golden retriever</strong><span>High-frequency source · σ = 2</span></figcaption></figure>
+<figure class="result"><a href="media/maye_dog_original_low.png" target="_blank" rel="noopener"><img src="media/maye_dog_original_low.png" alt="Drake Maye" loading="lazy" width="600" height="436"></a><figcaption><strong>Drake Maye</strong><span>Low-frequency source · σ = 8</span></figcaption></figure>
+</div>
+
+<figure class="result"><a href="media/maye_dog_hybrid.png" target="_blank" rel="noopener"><img src="media/maye_dog_hybrid.png" alt="Drake Maye + golden retriever hybrid" loading="lazy" width="377" height="310"></a><figcaption><strong>Drake Maye + golden retriever hybrid</strong></figcaption></figure>
+
+<h3>Payton Tolle + brown bear</h3>
+
+<div class="image-grid gallery">
+<figure class="result"><a href="media/tolle_bear_original_high.png" target="_blank" rel="noopener"><img src="media/tolle_bear_original_high.png" alt="Brown bear" loading="lazy" width="600" height="399"></a><figcaption><strong>Brown bear</strong><span>High-frequency source · σ = 2</span></figcaption></figure>
+<figure class="result"><a href="media/tolle_bear_original_low.png" target="_blank" rel="noopener"><img src="media/tolle_bear_original_low.png" alt="Payton Tolle" loading="lazy" width="600" height="436"></a><figcaption><strong>Payton Tolle</strong><span>Low-frequency source · σ = 8</span></figcaption></figure>
+</div>
+
+<figure class="result"><a href="media/tolle_bear_hybrid.png" target="_blank" rel="noopener"><img src="media/tolle_bear_hybrid.png" alt="Payton Tolle + brown bear hybrid" loading="lazy" width="408" height="365"></a><figcaption><strong>Payton Tolle + brown bear hybrid</strong></figcaption></figure>
+
+</section>
+
+<section id="part-2-3"><h2>Part 2.3: Gaussian and Laplacian Stacks</h2>
+
+<h3>Gaussian stacks</h3>
+
+<div class="image-grid gallery">
+<figure class="result"><a href="media/apple_gaussian_0.png" target="_blank" rel="noopener"><img src="media/apple_gaussian_0.png" alt="Apple: level 0" loading="lazy" width="300" height="300"></a><figcaption><strong>Apple: level 0</strong></figcaption></figure>
+<figure class="result"><a href="media/orange_gaussian_0.png" target="_blank" rel="noopener"><img src="media/orange_gaussian_0.png" alt="Orange: level 0" loading="lazy" width="300" height="300"></a><figcaption><strong>Orange: level 0</strong></figcaption></figure>
+</div>
+
+<div class="image-grid gallery">
+<figure class="result"><a href="media/apple_gaussian_1.png" target="_blank" rel="noopener"><img src="media/apple_gaussian_1.png" alt="Apple: level 1" loading="lazy" width="300" height="300"></a><figcaption><strong>Apple: level 1</strong></figcaption></figure>
+<figure class="result"><a href="media/orange_gaussian_1.png" target="_blank" rel="noopener"><img src="media/orange_gaussian_1.png" alt="Orange: level 1" loading="lazy" width="300" height="300"></a><figcaption><strong>Orange: level 1</strong></figcaption></figure>
+</div>
+
+<div class="image-grid gallery">
+<figure class="result"><a href="media/apple_gaussian_2.png" target="_blank" rel="noopener"><img src="media/apple_gaussian_2.png" alt="Apple: level 2" loading="lazy" width="300" height="300"></a><figcaption><strong>Apple: level 2</strong></figcaption></figure>
+<figure class="result"><a href="media/orange_gaussian_2.png" target="_blank" rel="noopener"><img src="media/orange_gaussian_2.png" alt="Orange: level 2" loading="lazy" width="300" height="300"></a><figcaption><strong>Orange: level 2</strong></figcaption></figure>
+</div>
+
+<div class="image-grid gallery">
+<figure class="result"><a href="media/apple_gaussian_3.png" target="_blank" rel="noopener"><img src="media/apple_gaussian_3.png" alt="Apple: level 3" loading="lazy" width="300" height="300"></a><figcaption><strong>Apple: level 3</strong></figcaption></figure>
+<figure class="result"><a href="media/orange_gaussian_3.png" target="_blank" rel="noopener"><img src="media/orange_gaussian_3.png" alt="Orange: level 3" loading="lazy" width="300" height="300"></a><figcaption><strong>Orange: level 3</strong></figcaption></figure>
+</div>
+
+<div class="image-grid gallery">
+<figure class="result"><a href="media/apple_gaussian_4.png" target="_blank" rel="noopener"><img src="media/apple_gaussian_4.png" alt="Apple: level 4" loading="lazy" width="300" height="300"></a><figcaption><strong>Apple: level 4</strong></figcaption></figure>
+<figure class="result"><a href="media/orange_gaussian_4.png" target="_blank" rel="noopener"><img src="media/orange_gaussian_4.png" alt="Orange: level 4" loading="lazy" width="300" height="300"></a><figcaption><strong>Orange: level 4</strong></figcaption></figure>
+</div>
+
+<div class="image-grid gallery">
+<figure class="result"><a href="media/apple_gaussian_5.png" target="_blank" rel="noopener"><img src="media/apple_gaussian_5.png" alt="Apple: level 5" loading="lazy" width="300" height="300"></a><figcaption><strong>Apple: level 5</strong></figcaption></figure>
+<figure class="result"><a href="media/orange_gaussian_5.png" target="_blank" rel="noopener"><img src="media/orange_gaussian_5.png" alt="Orange: level 5" loading="lazy" width="300" height="300"></a><figcaption><strong>Orange: level 5</strong></figcaption></figure>
+</div>
+
+<h3>Laplacian stacks</h3>
+
+<div class="image-grid gallery">
+<figure class="result"><a href="media/apple_laplacian_0.png" target="_blank" rel="noopener"><img src="media/apple_laplacian_0.png" alt="Apple: level 0" loading="lazy" width="300" height="300"></a><figcaption><strong>Apple: level 0</strong></figcaption></figure>
+<figure class="result"><a href="media/orange_laplacian_0.png" target="_blank" rel="noopener"><img src="media/orange_laplacian_0.png" alt="Orange: level 0" loading="lazy" width="300" height="300"></a><figcaption><strong>Orange: level 0</strong></figcaption></figure>
+</div>
+
+<div class="image-grid gallery">
+<figure class="result"><a href="media/apple_laplacian_1.png" target="_blank" rel="noopener"><img src="media/apple_laplacian_1.png" alt="Apple: level 1" loading="lazy" width="300" height="300"></a><figcaption><strong>Apple: level 1</strong></figcaption></figure>
+<figure class="result"><a href="media/orange_laplacian_1.png" target="_blank" rel="noopener"><img src="media/orange_laplacian_1.png" alt="Orange: level 1" loading="lazy" width="300" height="300"></a><figcaption><strong>Orange: level 1</strong></figcaption></figure>
+</div>
+
+<div class="image-grid gallery">
+<figure class="result"><a href="media/apple_laplacian_2.png" target="_blank" rel="noopener"><img src="media/apple_laplacian_2.png" alt="Apple: level 2" loading="lazy" width="300" height="300"></a><figcaption><strong>Apple: level 2</strong></figcaption></figure>
+<figure class="result"><a href="media/orange_laplacian_2.png" target="_blank" rel="noopener"><img src="media/orange_laplacian_2.png" alt="Orange: level 2" loading="lazy" width="300" height="300"></a><figcaption><strong>Orange: level 2</strong></figcaption></figure>
+</div>
+
+<div class="image-grid gallery">
+<figure class="result"><a href="media/apple_laplacian_3.png" target="_blank" rel="noopener"><img src="media/apple_laplacian_3.png" alt="Apple: level 3" loading="lazy" width="300" height="300"></a><figcaption><strong>Apple: level 3</strong></figcaption></figure>
+<figure class="result"><a href="media/orange_laplacian_3.png" target="_blank" rel="noopener"><img src="media/orange_laplacian_3.png" alt="Orange: level 3" loading="lazy" width="300" height="300"></a><figcaption><strong>Orange: level 3</strong></figcaption></figure>
+</div>
+
+<div class="image-grid gallery">
+<figure class="result"><a href="media/apple_laplacian_4.png" target="_blank" rel="noopener"><img src="media/apple_laplacian_4.png" alt="Apple: level 4" loading="lazy" width="300" height="300"></a><figcaption><strong>Apple: level 4</strong></figcaption></figure>
+<figure class="result"><a href="media/orange_laplacian_4.png" target="_blank" rel="noopener"><img src="media/orange_laplacian_4.png" alt="Orange: level 4" loading="lazy" width="300" height="300"></a><figcaption><strong>Orange: level 4</strong></figcaption></figure>
+</div>
+
+<div class="image-grid gallery">
+<figure class="result"><a href="media/apple_laplacian_5.png" target="_blank" rel="noopener"><img src="media/apple_laplacian_5.png" alt="Apple: level 5 (residual)" loading="lazy" width="300" height="300"></a><figcaption><strong>Apple: level 5 (residual)</strong></figcaption></figure>
+<figure class="result"><a href="media/orange_laplacian_5.png" target="_blank" rel="noopener"><img src="media/orange_laplacian_5.png" alt="Orange: level 5 (residual)" loading="lazy" width="300" height="300"></a><figcaption><strong>Orange: level 5 (residual)</strong></figcaption></figure>
+</div>
+
+<h3>Recreating Figure 3.42 (a)–(l)</h3>
+
+<figure class="result"><a href="media/oraple_process.png" target="_blank" rel="noopener"><img src="media/oraple_process.png" alt="Masked apple, masked orange, and combined result" loading="lazy" width="1200" height="1200"></a><figcaption><strong>Masked apple, masked orange, and combined result</strong></figcaption></figure>
+
+</section>
+
+<section id="part-2-4"><h2>Part 2.4: Multiresolution Blending</h2>
+
+<h3>Apple + orange</h3>
+
+<div class="image-grid gallery">
+<figure class="result"><a href="media/apple_gaussian_0.png" target="_blank" rel="noopener"><img src="media/apple_gaussian_0.png" alt="Apple" loading="lazy" width="300" height="300"></a><figcaption><strong>Apple</strong></figcaption></figure>
+<figure class="result"><a href="media/orange_gaussian_0.png" target="_blank" rel="noopener"><img src="media/orange_gaussian_0.png" alt="Orange" loading="lazy" width="300" height="300"></a><figcaption><strong>Orange</strong></figcaption></figure>
+<figure class="result"><a href="media/oraple_mask.png" target="_blank" rel="noopener"><img src="media/oraple_mask.png" alt="Vertical split mask" loading="lazy" width="300" height="300"></a><figcaption><strong>Vertical split mask</strong></figcaption></figure>
+<figure class="result"><a href="media/oraple.png" target="_blank" rel="noopener"><img src="media/oraple.png" alt="Oraple" loading="lazy" width="300" height="300"></a><figcaption><strong>Oraple</strong></figcaption></figure>
+</div>
+
+<h3>Golden retriever + Drake Maye</h3>
+
+<div class="image-grid gallery">
+<figure class="result"><a href="media/blend1_first.png" target="_blank" rel="noopener"><img src="media/blend1_first.png" alt="Aligned animal input" loading="lazy" width="400" height="291"></a><figcaption><strong>Aligned animal input</strong></figcaption></figure>
+<figure class="result"><a href="media/blend1_second.png" target="_blank" rel="noopener"><img src="media/blend1_second.png" alt="Player input" loading="lazy" width="400" height="291"></a><figcaption><strong>Player input</strong></figcaption></figure>
+<figure class="result"><a href="media/blend1_mask.png" target="_blank" rel="noopener"><img src="media/blend1_mask.png" alt="Ellipse mask" loading="lazy" width="400" height="291"></a><figcaption><strong>Ellipse mask</strong></figcaption></figure>
+<figure class="result"><a href="media/blend1_result.png" target="_blank" rel="noopener"><img src="media/blend1_result.png" alt="Multiresolution blend" loading="lazy" width="400" height="291"></a><figcaption><strong>Multiresolution blend</strong></figcaption></figure>
+</div>
+
+<h3>Favorite blend: process</h3>
+
+<figure class="result"><a href="media/blend1_process.png" target="_blank" rel="noopener"><img src="media/blend1_process.png" alt="Masked contributions and reconstruction" loading="lazy" width="1200" height="1200"></a><figcaption><strong>Masked contributions and reconstruction</strong></figcaption></figure>
+
+<h3>Brown bear + Payton Tolle</h3>
+
+<div class="image-grid gallery">
+<figure class="result"><a href="media/blend2_first.png" target="_blank" rel="noopener"><img src="media/blend2_first.png" alt="Aligned animal input" loading="lazy" width="400" height="291"></a><figcaption><strong>Aligned animal input</strong></figcaption></figure>
+<figure class="result"><a href="media/blend2_second.png" target="_blank" rel="noopener"><img src="media/blend2_second.png" alt="Player input" loading="lazy" width="400" height="291"></a><figcaption><strong>Player input</strong></figcaption></figure>
+<figure class="result"><a href="media/blend2_mask.png" target="_blank" rel="noopener"><img src="media/blend2_mask.png" alt="Polygon mask" loading="lazy" width="400" height="291"></a><figcaption><strong>Polygon mask</strong></figcaption></figure>
+<figure class="result"><a href="media/blend2_result.png" target="_blank" rel="noopener"><img src="media/blend2_result.png" alt="Multiresolution blend" loading="lazy" width="400" height="291"></a><figcaption><strong>Multiresolution blend</strong></figcaption></figure>
+</div>
+
+</section>
+
+<section id="reflection"><h2>Reflection</h2>
+
+<p>The most important and interesting thing I learned from this project is that high-frequency information is not inherently good or bad- its value depends on the task. For example, in sharpening, I strengthened high frequencies to emphasize detail, but in edge detection, I suppressed some of those frequencies first because the small intensity variations distracted from the main outlines. These different experiments helped me understand that filtering involves deciding which information matters for the result, rather than simply trying to preserve as much detail as possible!</p>
+
+</section>
+
+</main>
+<footer>CS180 · Fall 2026</footer>
+</body>
+</html>

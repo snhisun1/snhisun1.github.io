@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<meta content="noindex, nofollow" name="robots"/>
+<title>Project 4A | CS180</title>
+<link href="style.css" rel="stylesheet"/>
+</head>
+<body>
+<header><h1>Project 4A</h1><p>Image Warping and Mosaicing</p></header>
+<main>
+<a class="back-link" href="https://snhisun1.github.io/">← Back to all projects</a>
+<nav aria-label="Sections" class="contents"><a href="#a-1">A.1 Source photographs</a><a href="#a-2">A.2 Homographies</a><a href="#a-3">A.3 Rectification</a><a href="#a-4">A.4 Mosaics</a></nav>
+<section id="a-1"><h2>A.1: Shoot the Pictures</h2>
+<h3>Outdoor</h3>
+<div class="image-grid"><figure class="result"><a href="media/IMG_6014.jpg" rel="noopener" target="_blank"><img alt="Image 1" height="900" loading="lazy" src="media/IMG_6014.jpg" width="1200"/></a><figcaption><strong>Image 1</strong></figcaption></figure><figure class="result"><a href="media/IMG_6016.jpg" rel="noopener" target="_blank"><img alt="Image 2" height="900" loading="lazy" src="media/IMG_6016.jpg" width="1200"/></a><figcaption><strong>Image 2</strong></figcaption></figure></div>
+<h3>Kitchen</h3>
+<div class="image-grid"><figure class="result"><a href="media/IMG_6029.jpg" rel="noopener" target="_blank"><img alt="Image 1" height="900" loading="lazy" src="media/IMG_6029.jpg" width="1200"/></a><figcaption><strong>Image 1</strong></figcaption></figure><figure class="result"><a href="media/IMG_6030.jpg" rel="noopener" target="_blank"><img alt="Image 2" height="900" loading="lazy" src="media/IMG_6030.jpg" width="1200"/></a><figcaption><strong>Image 2</strong></figcaption></figure></div>
+<h3>Living room</h3>
+<div class="image-grid"><figure class="result"><a href="media/IMG_6033.jpg" rel="noopener" target="_blank"><img alt="Image 1" height="900" loading="lazy" src="media/IMG_6033.jpg" width="1200"/></a><figcaption><strong>Image 1</strong></figcaption></figure><figure class="result"><a href="media/IMG_6035.jpg" rel="noopener" target="_blank"><img alt="Image 2" height="900" loading="lazy" src="media/IMG_6035.jpg" width="1200"/></a><figcaption><strong>Image 2</strong></figcaption></figure></div>
+</section>
+<section id="a-2"><h2>A.2: Recover Homographies</h2>
+<h3>System of equations</h3>
+<div class="equation-system">
+<p>A point (x, y) in Image 1 matches a point (x′, y′) in Image 2.</p>
+<div class="formula">
+<math aria-label="Homography matrix with its bottom-right entry fixed to one" display="block" xmlns="http://www.w3.org/1998/Math/MathML">
+<mrow><mi>H</mi><mo>=</mo><mo>[</mo><mtable columnspacing="1em" rowspacing="0.4em">
+<mtr><mtd><msub><mi>h</mi><mn>11</mn></msub></mtd><mtd><msub><mi>h</mi><mn>12</mn></msub></mtd><mtd><msub><mi>h</mi><mn>13</mn></msub></mtd></mtr>
+<mtr><mtd><msub><mi>h</mi><mn>21</mn></msub></mtd><mtd><msub><mi>h</mi><mn>22</mn></msub></mtd><mtd><msub><mi>h</mi><mn>23</mn></msub></mtd></mtr>
+<mtr><mtd><msub><mi>h</mi><mn>31</mn></msub></mtd><mtd><msub><mi>h</mi><mn>32</mn></msub></mtd><mtd><mn>1</mn></mtd></mtr>
+</mtable><mo>]</mo></mrow></math>
+<br/>
+<math aria-label="Destination coordinates obtained by homogeneous division" display="block" xmlns="http://www.w3.org/1998/Math/MathML">
+<mtable rowspacing="1em">
+<mtr><mtd><msup><mi>x</mi><mo>′</mo></msup><mo>=</mo><mfrac><mrow><msub><mi>h</mi><mn>11</mn></msub><mi>x</mi><mo>+</mo><msub><mi>h</mi><mn>12</mn></msub><mi>y</mi><mo>+</mo><msub><mi>h</mi><mn>13</mn></msub></mrow><mrow><msub><mi>h</mi><mn>31</mn></msub><mi>x</mi><mo>+</mo><msub><mi>h</mi><mn>32</mn></msub><mi>y</mi><mo>+</mo><mn>1</mn></mrow></mfrac></mtd></mtr>
+<mtr><mtd><msup><mi>y</mi><mo>′</mo></msup><mo>=</mo><mfrac><mrow><msub><mi>h</mi><mn>21</mn></msub><mi>x</mi><mo>+</mo><msub><mi>h</mi><mn>22</mn></msub><mi>y</mi><mo>+</mo><msub><mi>h</mi><mn>23</mn></msub></mrow><mrow><msub><mi>h</mi><mn>31</mn></msub><mi>x</mi><mo>+</mo><msub><mi>h</mi><mn>32</mn></msub><mi>y</mi><mo>+</mo><mn>1</mn></mrow></mfrac></mtd></mtr>
+</mtable></math>
+</div>
+<p>Rearranging gives two linear equations for each matching pair:</p>
+<div aria-label="Two linear equations from each correspondence" class="formula" role="math">xh<sub>11</sub> + yh<sub>12</sub> + h<sub>13</sub> − xx′h<sub>31</sub> − yx′h<sub>32</sub> = x′<br/>xh<sub>21</sub> + yh<sub>22</sub> + h<sub>23</sub> − xy′h<sub>31</sub> − yy′h<sub>32</sub> = y′</div>
+<p>Stack these equations into <strong>Ah = b</strong>, where h contains the eight unknown entries of H, and solve using least squares.</p>
+</div>
+<h3>Correspondences visualized</h3>
+<h3>Outdoor</h3>
+<figure class="result"><a href="media/outdoor_correspondences.png" rel="noopener" target="_blank"><img alt="Outdoor: point correspondences" height="480" loading="lazy" src="media/outdoor_correspondences.png" width="640"/></a><figcaption><strong>Outdoor: point correspondences</strong></figcaption></figure>
+<details><summary>System of equations: Ah = b (click to expand)</summary><pre aria-label="Outdoor: numerical A matrix and b vector" class="numeric-system">Ah = b
+
+h = [h₁₁ h₁₂ h₁₃ h₂₁ h₂₂ h₂₃ h₃₁ h₃₂]ᵀ
+
+A (22 × 8)                                                                                                     b (22 × 1)
+[       524.00       437.00         1.00         0.00         0.00         0.00    -19932.96    -16623.48 ]    [   38.04 ]
+[         0.00         0.00         0.00       524.00       437.00         1.00   -227929.52   -190086.26 ]    [  434.98 ]
+[       653.00       435.00         1.00         0.00         0.00         0.00   -137130.00    -91350.00 ]    [  210.00 ]
+[         0.00         0.00         0.00       653.00       435.00         1.00   -279771.32   -186371.40 ]    [  428.44 ]
+[       671.00       435.00         1.00         0.00         0.00         0.00   -155698.84   -100937.40 ]    [  232.04 ]
+[         0.00         0.00         0.00       671.00       435.00         1.00   -287275.23   -186236.55 ]    [  428.13 ]
+[       692.00       435.00         1.00         0.00         0.00         0.00   -177913.20   -111838.50 ]    [  257.10 ]
+[         0.00         0.00         0.00       692.00       435.00         1.00   -295809.24   -185949.45 ]    [  427.47 ]
+[       713.00       461.00         1.00         0.00         0.00         0.00   -201422.50   -130232.50 ]    [  282.50 ]
+[         0.00         0.00         0.00       713.00       461.00         1.00   -324350.83   -209713.51 ]    [  454.91 ]
+[       795.00       434.00         1.00         0.00         0.00         0.00   -295056.30   -161074.76 ]    [  371.14 ]
+[         0.00         0.00         0.00       795.00       434.00         1.00   -337223.10   -184094.12 ]    [  424.18 ]
+[       840.00       401.00         1.00         0.00         0.00         0.00   -348087.60   -166170.39 ]    [  414.39 ]
+[         0.00         0.00         0.00       840.00       401.00         1.00   -328440.00   -156791.00 ]    [  391.00 ]
+[       652.00       497.00         1.00         0.00         0.00         0.00   -138126.20   -105289.45 ]    [  211.85 ]
+[         0.00         0.00         0.00       652.00       497.00         1.00   -324572.12   -247411.57 ]    [  497.81 ]
+[       674.00       523.00         1.00         0.00         0.00         0.00   -161342.12   -125195.74 ]    [  239.38 ]
+[         0.00         0.00         0.00       674.00       523.00         1.00   -353796.08   -274533.16 ]    [  524.92 ]
+[       898.00       410.00         1.00         0.00         0.00         0.00   -420695.04   -192076.80 ]    [  468.48 ]
+[         0.00         0.00         0.00       898.00       410.00         1.00   -358903.66   -163864.70 ]    [  399.67 ]
+[       844.00       388.00         1.00         0.00         0.00         0.00   -353568.48   -162540.96 ]    [  418.92 ]
+[         0.00         0.00         0.00       844.00       388.00         1.00   -319158.60   -146722.20 ]    [  378.15 ]</pre></details><p><strong>Recovered homography matrix</strong></p><pre aria-label="Outdoor recovered homography">H =
+2.27299820 0.03727983 -1149.75859947
+0.41983862 1.80757132 -346.81468952
+0.00107721 -0.00008887 1.00000000</pre>
+<h3>Kitchen</h3>
+<figure class="result"><a href="media/kitchen_correspondences.png" rel="noopener" target="_blank"><img alt="Kitchen: point correspondences" height="480" loading="lazy" src="media/kitchen_correspondences.png" width="640"/></a><figcaption><strong>Kitchen: point correspondences</strong></figcaption></figure>
+<details><summary>System of equations: Ah = b (click to expand)</summary><pre aria-label="Kitchen: numerical A matrix and b vector" class="numeric-system">Ah = b
+
+h = [h₁₁ h₁₂ h₁₃ h₂₁ h₂₂ h₂₃ h₃₁ h₃₂]ᵀ
+
+A (22 × 8)                                                                                                     b (22 × 1)
+[       808.00       337.00         1.00         0.00         0.00         0.00   -213716.00    -89136.50 ]    [  264.50 ]
+[         0.00         0.00         0.00       808.00       337.00         1.00   -257485.36   -107391.79 ]    [  318.67 ]
+[       917.00       333.00         1.00         0.00         0.00         0.00   -343755.79   -124831.71 ]    [  374.87 ]
+[         0.00         0.00         0.00       917.00       333.00         1.00   -295136.45   -107176.05 ]    [  321.85 ]
+[       913.00       546.00         1.00         0.00         0.00         0.00   -346410.46   -207163.32 ]    [  379.42 ]
+[         0.00         0.00         0.00       913.00       546.00         1.00   -480758.41   -287507.22 ]    [  526.57 ]
+[       804.00       540.00         1.00         0.00         0.00         0.00   -216718.20   -145557.00 ]    [  269.55 ]
+[         0.00         0.00         0.00       804.00       540.00         1.00   -427752.12   -287296.20 ]    [  532.03 ]
+[      1081.00       365.00         1.00         0.00         0.00         0.00   -557114.97   -188110.05 ]    [  515.37 ]
+[         0.00         0.00         0.00      1081.00       365.00         1.00   -387592.55   -130870.75 ]    [  358.55 ]
+[      1126.00       347.00         1.00         0.00         0.00         0.00   -631629.70   -194649.65 ]    [  560.95 ]
+[         0.00         0.00         0.00      1126.00       347.00         1.00   -384326.32   -118438.04 ]    [  341.32 ]
+[      1080.00       456.00         1.00         0.00         0.00         0.00   -558630.00   -235866.00 ]    [  517.25 ]
+[         0.00         0.00         0.00      1080.00       456.00         1.00   -470361.60   -198597.12 ]    [  435.52 ]
+[      1034.00       464.00         1.00         0.00         0.00         0.00   -497767.60   -223369.60 ]    [  481.40 ]
+[         0.00         0.00         0.00      1034.00       464.00         1.00   -459127.02   -206029.92 ]    [  444.03 ]
+[      1140.00       469.00         1.00         0.00         0.00         0.00   -653117.40   -268694.79 ]    [  572.91 ]
+[         0.00         0.00         0.00      1140.00       469.00         1.00   -506046.00   -208189.10 ]    [  443.90 ]
+[      1023.00       638.00         1.00         0.00         0.00         0.00   -488093.76   -304402.56 ]    [  477.12 ]
+[         0.00         0.00         0.00      1023.00       638.00         1.00   -611293.65   -381236.90 ]    [  597.55 ]
+[      1093.00       725.00         1.00         0.00         0.00         0.00   -597269.85   -396176.25 ]    [  546.45 ]
+[         0.00         0.00         0.00      1093.00       725.00         1.00   -720538.39   -477941.75 ]    [  659.23 ]</pre></details><p><strong>Recovered homography matrix</strong></p><pre aria-label="Kitchen recovered homography">H =
+1.62555921 0.12157498 -970.72016117
+0.17876054 1.46767288 -161.78371986
+0.00051231 0.00012363 1.00000000</pre>
+<h3>Living room</h3>
+<figure class="result"><a href="media/living_room_correspondences.png" rel="noopener" target="_blank"><img alt="Living room: point correspondences" height="480" loading="lazy" src="media/living_room_correspondences.png" width="640"/></a><figcaption><strong>Living room: point correspondences</strong></figcaption></figure>
+<details><summary>System of equations: Ah = b (click to expand)</summary><pre aria-label="Living room: numerical A matrix and b vector" class="numeric-system">Ah = b
+
+h = [h₁₁ h₁₂ h₁₃ h₂₁ h₂₂ h₂₃ h₃₁ h₃₂]ᵀ
+
+A (22 × 8)                                                                                                     b (22 × 1)
+[       637.00       290.00         1.00         0.00         0.00         0.00   -280330.96   -127623.20 ]    [  440.08 ]
+[         0.00         0.00         0.00       637.00       290.00         1.00   -176799.35    -80489.50 ]    [  277.55 ]
+[       713.00       287.00         1.00         0.00         0.00         0.00   -368877.68   -148482.32 ]    [  517.36 ]
+[         0.00         0.00         0.00       713.00       287.00         1.00   -199483.14    -80296.86 ]    [  279.78 ]
+[       713.00       435.00         1.00         0.00         0.00         0.00   -368635.26   -224903.70 ]    [  517.02 ]
+[         0.00         0.00         0.00       713.00       435.00         1.00   -304636.38   -185858.10 ]    [  427.26 ]
+[       638.00       435.00         1.00         0.00         0.00         0.00   -281166.60   -191704.50 ]    [  440.70 ]
+[         0.00         0.00         0.00       638.00       435.00         1.00   -271819.90   -185331.75 ]    [  426.05 ]
+[       800.00       523.00         1.00         0.00         0.00         0.00   -479224.00   -313292.69 ]    [  599.03 ]
+[         0.00         0.00         0.00       800.00       523.00         1.00   -410536.00   -268387.91 ]    [  513.17 ]
+[      1018.00       552.00         1.00         0.00         0.00         0.00   -803599.02   -435743.28 ]    [  789.39 ]
+[         0.00         0.00         0.00      1018.00       552.00         1.00   -546666.00   -296424.00 ]    [  537.00 ]
+[      1023.00       698.00         1.00         0.00         0.00         0.00   -811760.73   -553869.98 ]    [  793.51 ]
+[         0.00         0.00         0.00      1023.00       698.00         1.00   -686187.48   -468190.48 ]    [  670.76 ]
+[       796.00       646.00         1.00         0.00         0.00         0.00   -472035.96   -383084.46 ]    [  593.01 ]
+[         0.00         0.00         0.00       796.00       646.00         1.00   -502395.40   -407722.90 ]    [  631.15 ]
+[      1092.00       709.00         1.00         0.00         0.00         0.00   -929379.36   -603415.72 ]    [  851.08 ]
+[         0.00         0.00         0.00      1092.00       709.00         1.00   -740212.20   -480595.65 ]    [  677.85 ]
+[      1095.00       777.00         1.00         0.00         0.00         0.00   -934035.00   -662781.00 ]    [  853.00 ]
+[         0.00         0.00         0.00      1095.00       777.00         1.00   -809205.00   -574203.00 ]    [  739.00 ]
+[      1030.00       221.00         1.00         0.00         0.00         0.00   -828738.00   -177816.60 ]    [  804.60 ]
+[         0.00         0.00         0.00      1030.00       221.00         1.00   -240752.20    -51656.54 ]    [  233.74 ]</pre></details><p><strong>Recovered homography matrix</strong></p><pre aria-label="Living room recovered homography">H =
+1.36796299 -0.00244923 -338.85823157
+0.15110709 1.22699510 -116.09171275
+0.00031753 0.00001275 1.00000000</pre>
+</section>
+<section id="a-3"><h2>A.3: Warp the Images</h2>
+<div class="image-grid">
+<figure class="result"><a href="media/IMG_6036.jpg" rel="noopener" target="_blank"><img alt="Book: original" height="1200" loading="lazy" src="media/IMG_6036.jpg" width="900"/></a><figcaption><strong>Book: original</strong><span>6 × 9.5 inches.</span></figcaption></figure>
+<figure class="result"><a href="media/IMG_6037.jpg" rel="noopener" target="_blank"><img alt="Poster: original" height="1200" loading="lazy" src="media/IMG_6037.jpg" width="900"/></a><figcaption><strong>Poster: original</strong><span>24.5 × 36 inches.</span></figcaption></figure>
+</div>
+<h3>Book: rectification comparison</h3><div class="image-grid">
+<figure class="result"><a href="media/book_nearest_neighbor.png" rel="noopener" target="_blank"><img alt="Nearest neighbor" height="2370" loading="lazy" src="media/book_nearest_neighbor.png" width="1658"/></a><figcaption><strong>Nearest neighbor</strong></figcaption></figure>
+<figure class="result"><a href="media/book_bilinear.png" rel="noopener" target="_blank"><img alt="Bilinear" height="2370" loading="lazy" src="media/book_bilinear.png" width="1658"/></a><figcaption><strong>Bilinear</strong></figcaption></figure>
+</div><h3>Book: zoomed-in comparison</h3><div class="image-grid"><figure class="result"><a href="media/book_nearest_neighbor_crop.png" rel="noopener" target="_blank"><img alt="Book: nearest neighbor, zoomed-in comparison" height="951" loading="lazy" src="media/book_nearest_neighbor_crop.png" width="601"/></a><figcaption><strong>Nearest neighbor</strong></figcaption></figure><figure class="result"><a href="media/book_bilinear_crop.png" rel="noopener" target="_blank"><img alt="Book: bilinear, zoomed-in comparison" height="951" loading="lazy" src="media/book_bilinear_crop.png" width="601"/></a><figcaption><strong>Bilinear</strong></figcaption></figure></div><h3>Book: text close-up comparison</h3><div class="image-grid"><figure class="result"><a href="media/book_nearest_neighbor_text_closeup.png" rel="noopener" target="_blank"><img alt="Book: nearest neighbor text close-up" height="340" loading="lazy" src="media/book_nearest_neighbor_text_closeup.png" width="700"/></a><figcaption><strong>Nearest neighbor</strong></figcaption></figure><figure class="result"><a href="media/book_bilinear_text_closeup.png" rel="noopener" target="_blank"><img alt="Book: bilinear text close-up" height="340" loading="lazy" src="media/book_bilinear_text_closeup.png" width="700"/></a><figcaption><strong>Bilinear</strong></figcaption></figure></div>
+<h3>Poster: rectification comparison</h3><div class="image-grid">
+<figure class="result"><a href="media/poster_nearest_neighbor.png" rel="noopener" target="_blank"><img alt="Nearest neighbor" height="2277" loading="lazy" src="media/poster_nearest_neighbor.png" width="1958"/></a><figcaption><strong>Nearest neighbor</strong></figcaption></figure>
+<figure class="result"><a href="media/poster_bilinear.png" rel="noopener" target="_blank"><img alt="Bilinear" height="2277" loading="lazy" src="media/poster_bilinear.png" width="1958"/></a><figcaption><strong>Bilinear</strong></figcaption></figure>
+</div><h3>Poster: zoomed-in comparison</h3><div class="image-grid"><figure class="result"><a href="media/poster_nearest_neighbor_crop.png" rel="noopener" target="_blank"><img alt="Poster: nearest neighbor, zoomed-in comparison" height="721" loading="lazy" src="media/poster_nearest_neighbor_crop.png" width="491"/></a><figcaption><strong>Nearest neighbor</strong></figcaption></figure><figure class="result"><a href="media/poster_bilinear_crop.png" rel="noopener" target="_blank"><img alt="Poster: bilinear, zoomed-in comparison" height="721" loading="lazy" src="media/poster_bilinear_crop.png" width="491"/></a><figcaption><strong>Bilinear</strong></figcaption></figure></div><h3>Poster: text close-up comparison</h3><div class="image-grid"><figure class="result"><a href="media/poster_nearest_neighbor_text_closeup.png" rel="noopener" target="_blank"><img alt="Poster: nearest neighbor text close-up" height="280" loading="lazy" src="media/poster_nearest_neighbor_text_closeup.png" width="620"/></a><figcaption><strong>Nearest neighbor</strong></figcaption></figure><figure class="result"><a href="media/poster_bilinear_text_closeup.png" rel="noopener" target="_blank"><img alt="Poster: bilinear text close-up" height="280" loading="lazy" src="media/poster_bilinear_text_closeup.png" width="620"/></a><figcaption><strong>Bilinear</strong></figcaption></figure></div>
+<h3>Measured runtimes</h3>
+<div class="table-wrap"><table><thead><tr><th scope="col">Image</th><th scope="col">Nearest neighbor</th><th scope="col">Bilinear</th></tr></thead><tbody>
+<tr><th scope="row">Book</th><td>0.239736 seconds</td><td>0.462926 seconds</td></tr>
+<tr><th scope="row">Poster</th><td>0.204393 seconds</td><td>0.383146 seconds</td></tr>
+</tbody></table></div>
+<p>Both methods use the same homography, so the difference comes from sampling. Nearest neighbor copies the closest pixel, which produces jagged edges around the book’s lettering and the poster’s outlines. In comparison, bilinear interpolation averages four neighboring pixels using distance-based weights. As a result, the edges look smoother, although small text and fine details become slightly softer. The text close-ups show this difference more clearly: nearest neighbor produces blocky steps along the letters, while bilinear produces more gradual color transitions.</p><p>Nearest neighbor was faster. For the book, it took about 0.240 seconds compared with 0.463 seconds for bilinear interpolation. For the poster, the times were about 0.204 and 0.383 seconds. Therefore, bilinear took roughly twice as long but produced smoother results.</p>
+</section>
+<section id="a-4"><h2>A.4: Blend the Images into a Mosaic</h2>
+<p>First, I kept the second image as the reference and used the recovered homography to warp the first image into its coordinates with bilinear interpolation. I transformed the source corners to find a shared canvas large enough for both images, then offset their positions to handle negative coordinates. An alpha mask identifies valid warped pixels so empty areas do not contribute to the blend.</p><p>Next, I assigned feather weights that are highest at each image’s center and decrease linearly to zero at its edges. At each canvas location, I added the colors multiplied by their weights, then divided by the total weight. This gives the center of each image more influence and gradually reduces its contribution near the edges, creating a smoother transition between the two images. As for limitations, some ghosting remains, especially in the kitchen, because feathering smooths the seam but does not correct misaligned features. This means that the same edge appears at slightly different positions in the two images after warping, so blending can leave a doubled outline. For example, ghosting specifically appears at the end of the pot handle in the kitchen sink, where the handle looks slightly doubled.</p>
+<h3>Outdoor</h3>
+<div class="image-grid"><figure class="result"><a href="media/IMG_6014.jpg" rel="noopener" target="_blank"><img alt="Source" height="900" loading="lazy" src="media/IMG_6014.jpg" width="1200"/></a><figcaption><strong>Source</strong></figcaption></figure><figure class="result"><a href="media/IMG_6016.jpg" rel="noopener" target="_blank"><img alt="Reference" height="900" loading="lazy" src="media/IMG_6016.jpg" width="1200"/></a><figcaption><strong>Reference</strong></figcaption></figure></div>
+<figure class="result"><a href="media/outdoor_mosaic.png" rel="noopener" target="_blank"><img alt="Outdoor: blended mosaic" height="1738" loading="lazy" src="media/outdoor_mosaic.png" width="2414"/></a><figcaption><strong>Outdoor: blended mosaic</strong></figcaption></figure>
+<h3>Kitchen</h3>
+<div class="image-grid"><figure class="result"><a href="media/IMG_6029.jpg" rel="noopener" target="_blank"><img alt="Source" height="900" loading="lazy" src="media/IMG_6029.jpg" width="1200"/></a><figcaption><strong>Source</strong></figcaption></figure><figure class="result"><a href="media/IMG_6030.jpg" rel="noopener" target="_blank"><img alt="Reference" height="900" loading="lazy" src="media/IMG_6030.jpg" width="1200"/></a><figcaption><strong>Reference</strong></figcaption></figure></div>
+<figure class="result"><a href="media/kitchen_mosaic.png" rel="noopener" target="_blank"><img alt="Kitchen: blended mosaic" height="1205" loading="lazy" src="media/kitchen_mosaic.png" width="2171"/></a><figcaption><strong>Kitchen: blended mosaic</strong></figcaption></figure>
+<h3>Living room</h3>
+<div class="image-grid"><figure class="result"><a href="media/IMG_6033.jpg" rel="noopener" target="_blank"><img alt="Source" height="900" loading="lazy" src="media/IMG_6033.jpg" width="1200"/></a><figcaption><strong>Source</strong></figcaption></figure><figure class="result"><a href="media/IMG_6035.jpg" rel="noopener" target="_blank"><img alt="Reference" height="900" loading="lazy" src="media/IMG_6035.jpg" width="1200"/></a><figcaption><strong>Reference</strong></figcaption></figure></div>
+<figure class="result"><a href="media/living_room_mosaic.png" rel="noopener" target="_blank"><img alt="Living room: blended mosaic" height="1094" loading="lazy" src="media/living_room_mosaic.png" width="1539"/></a><figcaption><strong>Living room: blended mosaic</strong></figcaption></figure>
+</section>
+</main>
+<footer>CS180 · Fall 2026</footer>
+</body>
+</html>
+

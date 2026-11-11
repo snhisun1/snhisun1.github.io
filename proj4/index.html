@@ -5,14 +5,15 @@
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
 <meta content="noindex, nofollow" name="robots"/>
-<title>Project 4A | CS180</title>
+<title>Project 4 | CS180</title>
 <link href="style.css" rel="stylesheet"/>
 </head>
 <body>
-<header><h1>Project 4A</h1><p>Image Warping and Mosaicing</p></header>
+<header><h1>Project 4</h1><p>Image Warping and Mosaicing</p></header>
 <main>
 <a class="back-link" href="https://snhisun1.github.io/">← Back to all projects</a>
-<nav aria-label="Sections" class="contents"><a href="#a-1">A.1 Source photographs</a><a href="#a-2">A.2 Homographies</a><a href="#a-3">A.3 Rectification</a><a href="#a-4">A.4 Mosaics</a></nav>
+<nav aria-label="Sections" class="contents"><a href="#a-1">A.1 Source photographs</a><a href="#a-2">A.2 Homographies</a><a href="#a-3">A.3 Rectification</a><a href="#a-4">A.4 Mosaics</a><a href="#b-1">B.1 Harris corners</a><a href="#b-2">B.2 Descriptors</a><a href="#b-3">B.3 Feature matching</a><a href="#b-4">B.4 Automatic mosaics</a></nav>
+<div class="part-heading" id="part-a"><h2>Part A: Image Warping and Mosaicing</h2></div>
 <section id="a-1"><h2>A.1: Shoot the Pictures</h2>
 <h3>Outdoor</h3>
 <div class="image-grid"><figure class="result"><a href="media/IMG_6014.jpg" rel="noopener" target="_blank"><img alt="Image 1" height="900" loading="lazy" src="media/IMG_6014.jpg" width="1200"/></a><figcaption><strong>Image 1</strong></figcaption></figure><figure class="result"><a href="media/IMG_6016.jpg" rel="noopener" target="_blank"><img alt="Image 2" height="900" loading="lazy" src="media/IMG_6016.jpg" width="1200"/></a><figcaption><strong>Image 2</strong></figcaption></figure></div>
@@ -172,6 +173,90 @@ A (22 × 8)                                                                     
 <h3>Living room</h3>
 <div class="image-grid"><figure class="result"><a href="media/IMG_6033.jpg" rel="noopener" target="_blank"><img alt="Source" height="900" loading="lazy" src="media/IMG_6033.jpg" width="1200"/></a><figcaption><strong>Source</strong></figcaption></figure><figure class="result"><a href="media/IMG_6035.jpg" rel="noopener" target="_blank"><img alt="Reference" height="900" loading="lazy" src="media/IMG_6035.jpg" width="1200"/></a><figcaption><strong>Reference</strong></figcaption></figure></div>
 <figure class="result"><a href="media/living_room_mosaic.png" rel="noopener" target="_blank"><img alt="Living room: blended mosaic" height="1094" loading="lazy" src="media/living_room_mosaic.png" width="1539"/></a><figcaption><strong>Living room: blended mosaic</strong></figcaption></figure>
+</section>
+<div class="part-heading" id="part-b"><h2>Part B: Feature Matching for Autostitching</h2></div>
+<section id="b-1"><h2>B.1: Harris Corner Detection</h2>
+<p>I left out corners within 20 pixels of the image border so each corner had room for a full descriptor window. I also showed 500 corners in both outdoor overlays so it was easier to compare how ANMS changed their distribution.</p>
+<figure class="result part-b-figure">
+<a href="media/part_b/corners.png" rel="noopener" target="_blank"><img src="media/part_b/corners.png" alt="The strongest 500 Harris corners on the outdoor source image, beside the 500 corners selected by ANMS." width="1800" height="750" loading="lazy"/></a>
+<figcaption><strong>Outdoor source image with and without ANMS</strong></figcaption>
+</figure>
+</section>
+<section id="b-2"><h2>B.2: Feature Descriptor Extraction</h2>
+<p>I used a single Gaussian blur to approximate the smoothing from two levels of the paper’s pyramid. This softened fine details before sampling and let me extract the patches directly from the original image grid. For the eight examples below, I used corners selected by ANMS in the first outdoor photo, the one with the large brick chimney on the left.</p>
+<figure class="result">
+<a href="media/part_b/descriptors.png" rel="noopener" target="_blank"><img src="media/part_b/descriptors.png" alt="Eight grayscale descriptor patches extracted from the outdoor source image." width="1050" height="600" loading="lazy"/></a>
+<figcaption><strong>Eight normalized 8 × 8 descriptors from the outdoor source photo</strong></figcaption>
+</figure>
+</section>
+<section id="b-3"><h2>B.3: Feature Matching</h2>
+<p>I chose a cutoff of 0.6 for the squared-distance ratio based on Figure 6(b) of the paper. That cutoff let me keep matches where the closest patch was clearly better than the runner-up, while leaving enough matches for RANSAC.</p>
+<h3>Outdoor</h3>
+<figure class="result part-b-figure">
+<a href="media/part_b/outdoor_matches.png" rel="noopener" target="_blank"><img src="media/part_b/outdoor_matches.png" alt="Outdoor source and reference images with lines connecting candidate feature matches." width="1800" height="750" loading="lazy"/></a>
+<figcaption><strong>Outdoor feature matches before RANSAC</strong></figcaption>
+</figure>
+<h3>Kitchen</h3>
+<figure class="result part-b-figure">
+<a href="media/part_b/kitchen_matches.png" rel="noopener" target="_blank"><img src="media/part_b/kitchen_matches.png" alt="Kitchen source and reference images with lines connecting candidate feature matches." width="1800" height="750" loading="lazy"/></a>
+<figcaption><strong>Kitchen feature matches before RANSAC</strong></figcaption>
+</figure>
+<h3>Living room</h3>
+<figure class="result part-b-figure">
+<a href="media/part_b/living_room_matches.png" rel="noopener" target="_blank"><img src="media/part_b/living_room_matches.png" alt="Living room source and reference images with lines connecting candidate feature matches." width="1800" height="750" loading="lazy"/></a>
+<figcaption><strong>Living room feature matches before RANSAC</strong></figcaption>
+</figure>
+</section>
+<section id="b-4"><h2>B.4: RANSAC for Robust Homography</h2>
+<p>I used a four-pixel tolerance to account for small differences in where the same corner was detected in each image. To give RANSAC plenty of chances to draw four good matches, I ran 2,500 trials. For repeatability, I also fixed the seed at 100.</p>
+<h3>Outdoor</h3>
+<figure class="result part-b-figure">
+<a href="media/part_b/outdoor_comparison.png" rel="noopener" target="_blank"><img src="media/part_b/outdoor_comparison.png" alt="Outdoor mosaic stitched manually on the left and automatically on the right." width="1800" height="750" loading="lazy"/></a>
+<figcaption><strong>Outdoor manual and automatic stitching</strong><a href="media/part_b/outdoor_automatic.png" rel="noopener" target="_blank">Open full-resolution automatic mosaic</a></figcaption>
+</figure>
+<p>Up close, the SUV’s outline looked doubled in the manual stitch. In the automatic version, its roof and wheels looked sharper.</p>
+<div class="image-grid">
+<figure class="result">
+<a href="media/part_b/outdoor_manual_closeup.png" rel="noopener" target="_blank"><img src="media/part_b/outdoor_manual_closeup.png" alt="Manually stitched close-up of the SUV and roofline." width="400" height="270" loading="lazy"/></a>
+<figcaption><strong>Manually stitched close-up</strong></figcaption>
+</figure>
+<figure class="result">
+<a href="media/part_b/outdoor_automatic_closeup.png" rel="noopener" target="_blank"><img src="media/part_b/outdoor_automatic_closeup.png" alt="Automatically stitched close-up of the SUV and roofline." width="400" height="270" loading="lazy"/></a>
+<figcaption><strong>Automatically stitched close-up</strong></figcaption>
+</figure>
+</div>
+<h3>Kitchen</h3>
+<figure class="result part-b-figure">
+<a href="media/part_b/kitchen_comparison.png" rel="noopener" target="_blank"><img src="media/part_b/kitchen_comparison.png" alt="Kitchen mosaic stitched manually on the left and automatically on the right." width="1800" height="750" loading="lazy"/></a>
+<figcaption><strong>Kitchen manual and automatic stitching</strong><a href="media/part_b/kitchen_automatic.png" rel="noopener" target="_blank">Open full-resolution automatic mosaic</a></figcaption>
+</figure>
+<p>The automatic stitch stretched the left side of the kitchen more, but the calendar’s bottom edge looked cleaner in the overlap. In the manual stitch, a faint second edge appeared below it.</p>
+<div class="image-grid">
+<figure class="result">
+<a href="media/part_b/kitchen_manual_closeup.png" rel="noopener" target="_blank"><img src="media/part_b/kitchen_manual_closeup.png" alt="Manually stitched close-up of the calendar and its lower edge." width="400" height="270" loading="lazy"/></a>
+<figcaption><strong>Manually stitched close-up</strong></figcaption>
+</figure>
+<figure class="result">
+<a href="media/part_b/kitchen_automatic_closeup.png" rel="noopener" target="_blank"><img src="media/part_b/kitchen_automatic_closeup.png" alt="Automatically stitched close-up of the calendar and its lower edge." width="400" height="270" loading="lazy"/></a>
+<figcaption><strong>Automatically stitched close-up</strong></figcaption>
+</figure>
+</div>
+<h3>Living room</h3>
+<figure class="result part-b-figure">
+<a href="media/part_b/living_room_comparison.png" rel="noopener" target="_blank"><img src="media/part_b/living_room_comparison.png" alt="Living room mosaic stitched manually on the left and automatically on the right." width="1800" height="750" loading="lazy"/></a>
+<figcaption><strong>Living room manual and automatic stitching</strong><a href="media/part_b/living_room_automatic.png" rel="noopener" target="_blank">Open full-resolution automatic mosaic</a></figcaption>
+</figure>
+<p>The living room looked nearly the same in both versions. Even up close, the TV frame and the objects on the stand looked similar.</p>
+<div class="image-grid">
+<figure class="result">
+<a href="media/part_b/living_room_manual_closeup.png" rel="noopener" target="_blank"><img src="media/part_b/living_room_manual_closeup.png" alt="Manually stitched close-up of the TV and the objects on the stand." width="400" height="270" loading="lazy"/></a>
+<figcaption><strong>Manually stitched close-up</strong></figcaption>
+</figure>
+<figure class="result">
+<a href="media/part_b/living_room_automatic_closeup.png" rel="noopener" target="_blank"><img src="media/part_b/living_room_automatic_closeup.png" alt="Automatically stitched close-up of the TV and the objects on the stand." width="400" height="270" loading="lazy"/></a>
+<figcaption><strong>Automatically stitched close-up</strong></figcaption>
+</figure>
+</div>
 </section>
 </main>
 <footer>CS180 · Fall 2026</footer>

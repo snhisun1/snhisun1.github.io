@@ -152,3 +152,5 @@ a:focus-visible { outline: 3px solid #b47418; outline-offset: 4px; }
  h2, h3 { break-after: avoid; }
  figure.result { break-inside: avoid; }
 }
+
+.part-b-figure img { max-width: none; }

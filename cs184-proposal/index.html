@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Turning Freehand Sketches into Playable 3D Objects</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+<style>
+body { font-family: 'Inter', sans-serif; line-height: 1.6; color: #111; }
+h1 { text-align: center; line-height: 1.3; }
+.container { margin: 0 auto; padding: 60px 20%; }
+h2 { margin-top: 48px; }
+h3 { margin-top: 28px; }
+figure { text-align: center; margin: 16px 0 24px; }
+img { display: block; width: 100%; height: auto; }
+figcaption { font-size: 14px; line-height: 1.5; margin-top: 8px; }
+.image-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
+.settings { font-size: 14px; }
+table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 14px; }
+th, td { padding: 9px 8px; border-bottom: 1px solid #ddd; text-align: right; }
+th:first-child, td:first-child { text-align: left; }
+a { overflow-wrap: anywhere; }
+@media (max-width: 800px) { .container { padding: 32px 6%; } }
+@media (max-width: 520px) { .image-grid { grid-template-columns: 1fr; } }
+@media print {
+ .container { padding: 0; }
+ figure, tr { break-inside: avoid; }
+ h2, h3 { break-after: avoid; }
+ .image-grid { break-inside: avoid; }
+}
+</style>
+</head>
+<body><main class="container">
+<p style="text-align: center;">Allan Tsay, Steven Sun, Penelope Ricafrente, Jin Alexander Yu</p>
+<h1>Turning Freehand Sketches into Playable 3D Objects</h1>
+<h2>Summary:</h2>
+<p>A draw-to-create game: the player sketches an object in the air, and it appears in the world as a real 3D object with collision and physics. Instead of spawning premade assets, every object&#x27;s geometry is generated at runtime from the player&#x27;s own strokes. We use curve fitting, constrained Delaunay triangulation, Poisson-based surface inflation, and sweep surfaces with rotation-minimizing frames, plus custom shaders for growth animation and stylized rendering.</p>
+<h2>Problem Description</h2>
+<p>We want to turn a rough 2D sketch into an interactive 3D object in real time, like Scribblenauts without premade objects. Our goal is to create a geometry that is faithful to what the player drew, generated quickly, and immediately usable to play with.</p>
+<p>This is challenging because hand-drawn inputs are usually very noisy so we must clean and fit them before any geometry is built. 2D to 3D is something where we have to infer a volume, where thick regions would bulge more than thin ones. We also need to have robust meshing or else the surface solve would degrade. Also a big one would be real-time constraints as we must construct the object in a reasonable time so the player isn’t left waiting.</p>
+<p>Our approach includes having the strokes resampled, simplified, and fit with smoothed B-splines. The player chooses a brush and each brush maps to a geometry operator, like inflate, sweep, and revolve + extrude.</p>
+<p>1. Inflate (blobs, animals, rocks): triangulate the closed outline with constrained Delaunay triangulation, solve a Poisson equation for height using a cotangent Laplacian, remap the height by its square root for round cross-sections, then mirror and stitch into a watertight mesh.</p>
+<p>2. Sweep (bridges, ropes, vines): extrude a cross-section along the fitted curve using rotation-minimizing frames.</p>
+<p>3. Revolve and extrude (vases, towers, walls, blades): stretch operators.</p>
+<p>Generated meshes get normals, smoothing, procedural UVs and a collision proxy, then are rendered with our own growth-reveal and toon shaders.</p>
+<p>Division of labor with Unity. Unity is used only for rendering, physics simulation, input and scene management. All geometry processing, the mesh operators, the sparse solver, collider generation and the shaders are our own code.</p>
+<h2>Goals and Deliverables</h2>
+<h3>Plan to deliver (baseline)</h3>
+<p>1. Stroke pipeline: capture strokes on a camera-facing drawing plane, arc-length resampling, Ramer–Douglas–Peucker simplification, closed-loop detection and snapping, and least-squares B-spline fitting with a smoothing weight.</p>
+<p>2. Constrained Delaunay triangulation of arbitrary simple outlines, with interior Steiner-point refinement for well-shaped triangles.</p>
+<p>3. Poisson inflation: cotangent Laplacian assembly, our own conjugate-gradient sparse solver, square-root height remapping, and mirrored front and back surfaces stitched into a watertight mesh.</p>
+<p>4. Sweep operator: cross-sections extruded along the fitted curve using rotation-minimizing frames (double reflection method), with a world-up constraint so bridges stay level.</p>
+<p>5. Mesh post-processing: vertex normals, Laplacian smoothing, and arc-length or projected UVs.</p>
+<p>6. Collision: our own Quickhull convex hull as the physics proxy, so generated objects fall, stack and support the player.</p>
+<p>7. Demo level: a small 3D level with a gap to bridge and a ledge to reach, plus inflate and sweep brushes the player switches between.</p>
+<p>We will create a demo showcasing different 2D drawings drawn by the user and turning it into a 3D object. We can take the 3D object and move it around, showing how it looks in different lighting, accounting for physics and the like.</p>
+<table><thead><tr><th>Metric</th><th>How we measure it</th><th>Target</th></tr></thead><tbody>
+<tr><td>End-to-end latency</td><td>Time from pen-up to the object in the world, for 100 to 2,000 mesh vertices</td><td>Under 50 ms at 500 vertices</td></tr>
+<tr><td>Solver performance</td><td>Conjugate-gradient iterations and time vs. vertex count</td><td>Plotted scaling curve</td></tr>
+<tr><td>Silhouette fidelity</td><td>Distance between the drawn outline and the rendered mesh&#x27;s silhouette from the drawing view</td><td>Under 1% of the outline&#x27;s size</td></tr>
+<tr><td>Triangle quality</td><td>Minimum angle and aspect-ratio histogram of each triangulation</td><td>Minimum angle above 20°</td></tr>
+<tr><td>Mesh validity</td><td>Watertight and manifold checks on a test set of 30 or more sketches</td><td>100% pass</td></tr>
+<tr><td>Frame stability</td><td>Total twist along swept curves, rotation-minimizing vs. Frenet frames</td><td>Visibly lower twist, plotted</td></tr>
+<tr><td>Robustness</td><td>Share of test sketches (including messy, self-intersecting or unclosed ones) producing a valid object</td><td>At least 90%</td></tr>
+</tbody></table>
+<p>How faithfully does Poisson inflation with square-root remapping match people&#x27;s expectations of a shape&#x27;s 3D form, compared to Teddy&#x27;s original chordal-axis method?</p>
+<p>How does triangulation density trade off against solve time and surface smoothness?</p>
+<p>How much stroke smoothing is best before fitted curves stop matching what the player intended?</p>
+<h3>Hope to deliver (aspirational)</h3>
+<p>• Revolve (draw half a profile, get a vase or tower) and extrude (beveled walls, blades, signs).</p>
+<p>• Growth shader: objects reveal themselves along stroke order with a glowing edge.</p>
+<p>• Non-photorealistic rendering: toon shading plus outline rendering, giving a consistent hand-drawn look.</p>
+<p>• Live preview: re-inflate the shape while the stroke is still being drawn.</p>
+<p>• Holes and multi-part drawings: outlines with inner loops (donuts, rings), and several strokes grouped into one object.</p>
+<p>• Sketch recognition: a small classifier ($P recognizer or a CNN trained on Quick, Draw!) that picks the operator and material automatically. This is a gameplay feature, not a claimed graphics contribution.</p>
+<h2>Schedule</h2>
+<h3>Proposed division of work</h3>
+<p>A: Stroke pipeline and curve fitting (also owns sweep, since it consumes the fitted curve)</p>
+<p>B: Triangulation and Poisson inflation (the core algorithmic risk)</p>
+<p>C: Unity/Minecraft integration, collision (Quickhull), demo level</p>
+<p>D: Shaders, post-processing, evaluation harness</p>
+<h3>Week 1: Foundations and de-risking</h3>
+<p>Set up the Unity project, repo, and a shared mesh data structure (half-edge or indexed, decide now).</p>
+<p>A: Drawing plane capture, arc-length resampling, RDP simplification, closed-loop detection.</p>
+<p>B: Constrained Delaunay triangulation on simple polygons (start with a clean implementation, test on hand-made outlines).</p>
+<p>C: Input and scene scaffolding, a placeholder object spawner, basic physics test scene.</p>
+<p>D: Mesh normals and a debug view (wireframe, triangle-quality coloring). Start the test-sketch set (aim for 30+ sketches saved as data files).</p>
+<p>Milestone: a drawn closed stroke shows up as a flat triangulated mesh in Unity.</p>
+<h3>Week 2: Core geometry</h3>
+<p>A: Least-squares B-spline fitting with smoothing weight. Then start the sweep operator with rotation-minimizing frames (double reflection) and the world-up constraint.</p>
+<p>B: Steiner-point refinement, cotangent Laplacian, your own conjugate-gradient solver, sqrt remapping, mirror and stitch into a watertight mesh.</p>
+<p>C: Quickhull collision proxy; hook generated meshes into Unity physics.</p>
+<p>D: Laplacian smoothing, UVs (arc-length or projected), automated watertight and manifold checks.</p>
+<p>Milestone: inflate works end to end, and a blob drawn in-game falls and collides. This is your minimum viable demo, so protect it.</p>
+<h3>Week 3: Completing the baseline and measuring</h3>
+<p>A: Finish sweep (bridges, ropes), robustness for messy input (self-intersections, unclosed strokes, tiny strokes).</p>
+<p>B: Performance tuning toward the under-50 ms target, with profiling at 100 to 2,000 vertices.</p>
+<p>C: Demo level (gap to bridge, ledge to reach), brush switching UI.</p>
+<p>D: Run the metrics: latency, CG scaling curve, triangle quality histograms, silhouette error, Frenet vs. RMF twist plot. Start the Teddy comparison for your research question.</p>
+<p>Milestone: all 7 baseline items done and the evaluation numbers exist. Feature freeze for baseline at the end of this week.</p>
+<h3>Week 4: Polish, aspirational features, presentation</h3>
+<p>Pick aspirational items in this order of payoff per effort: toon shading with outlines, then growth shader, then revolve/extrude, then live preview. Treat holes, multi-part drawings, and sketch recognition as stretch goals only if ahead.</p>
+<p>Finish the smoothing-strength study.</p>
+<p>Record a backup demo video, build the slides, rehearse the live demo.</p>
+<p>Milestone: polished demo, final plots, rehearsed presentation. Reserve the last 2 to 3 days for no new features, only bug fixes and rehearsal.</p>
+<h2>Resources</h2>
+<h3>Papers and books</h3>
+<p>• Igarashi, Matsuoka, Tanaka. Teddy: A Sketching Interface for 3D Freeform Design. SIGGRAPH 1999. The original sketch-inflation method.</p>
+</main></body>
+</html>
